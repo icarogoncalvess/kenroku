@@ -1,0 +1,1190 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KENROKU — Sistema Tático & Dedução</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-base: #050508;
+    --bg-surface: #0a0a0f;
+    --bg-card: #101017;
+    --bg-card-hover: #161622;
+    
+    --border-dim: rgba(255, 255, 255, 0.06);
+    --border-active: rgba(249, 115, 22, 0.4);
+    
+    --primary: #f97316; /* Laranja Chakra */
+    --primary-glow: rgba(249, 115, 22, 0.25);
+    --cursed-blue: #06b6d4; /* Energia Jujutsu / Foco Mentalista */
+    --cursed-blue-glow: rgba(6, 182, 212, 0.2);
+    
+    --text-main: #f4f4f5;
+    --text-muted: #8b8b9e;
+    
+    --radius: 14px;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background-color: var(--bg-base);
+    color: var(--text-main);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  code, .mono { font-family: 'JetBrains Mono', monospace; }
+  h1, h2, h3, .serif { font-family: 'Cinzel', serif; letter-spacing: 0.02em; }
+
+  ::selection { background: var(--primary); color: #000; }
+  a { color: var(--primary); text-decoration: none; }
+  button { font-family: inherit; }
+
+  /* Jujutsu/Mentalist Cursed Domain Background */
+  .domain-bg {
+    position: fixed; inset: 0; z-index: -1; pointer-events: none;
+    background: 
+      radial-gradient(circle at 10% 10%, rgba(249, 115, 22, 0.06) 0%, transparent 40%),
+      radial-gradient(circle at 90% 90%, rgba(6, 182, 212, 0.05) 0%, transparent 40%),
+      radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.03) 0%, transparent 60%),
+      var(--bg-base);
+  }
+  
+  /* Linhas de grade sutileza estilo mapa tático / blueprints */
+  .domain-bg::after {
+    content: ""; position: absolute; inset: 0;
+    background-image: linear-gradient(to right, rgba(255,255,255,0.015) 1px, transparent 1px),
+                      linear-gradient(to bottom, rgba(255,255,255,0.015) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  .app-shell { display: flex; min-height: 100vh; }
+
+  /* ---------- Sidebar Estilo Pergaminho Tecnológico / CBI ---------- */
+  .sidebar {
+    width: 280px; flex-shrink: 0;
+    background: rgba(10, 10, 15, 0.92);
+    backdrop-filter: blur(20px);
+    border-right: 1px solid var(--border-dim);
+    display: flex; flex-direction: column;
+    padding: 28px 16px;
+    position: sticky; top: 0; height: 100vh; z-index: 50;
+  }
+
+  .brand {
+    display: flex; align-items: center; gap: 14px;
+    padding: 0 10px 24px;
+    border-bottom: 1px solid var(--border-dim);
+    margin-bottom: 20px;
+  }
+  
+  /* LOGO CUSTOMIZADA: Olho Analítico + Selo Tático */
+  .custom-logo {
+    width: 44px; height: 44px; border-radius: 12px;
+    background: linear-gradient(135deg, #181824, #0d0d12);
+    border: 1px solid var(--border-active);
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+    box-shadow: 0 0 15px var(--primary-glow);
+  }
+  .custom-logo svg { width: 26px; height: 26px; fill: none; stroke: var(--primary); stroke-width: 2; }
+
+  .brand-title { font-size: 17px; font-weight: 900; color: #fff; font-family: 'Cinzel', serif; letter-spacing: 0.05em; }
+  .brand-sub { font-size: 10px; color: var(--cursed-blue); font-family: 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: 0.15em; margin-top: 3px; }
+
+  .nav { display: flex; flex-direction: column; gap: 6px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 14px;
+    padding: 12px 16px; border-radius: 10px;
+    color: var(--text-muted); background: transparent; border: 1px solid transparent;
+    cursor: pointer; font-size: 13.5px; font-weight: 600; text-align: left; width: 100%;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .nav-item svg { flex-shrink: 0; transition: transform 0.2s; }
+  .nav-item:hover { background: var(--bg-card); color: var(--text-main); border-color: var(--border-dim); }
+  .nav-item:hover svg { transform: scale(1.1); color: var(--primary); }
+  .nav-item.active {
+    background: linear-gradient(90deg, rgba(249, 115, 22, 0.15), transparent);
+    color: #fff; border-color: rgba(249, 115, 22, 0.3);
+    border-left: 3px solid var(--primary);
+  }
+  .nav-item.active svg { color: var(--primary); }
+
+  .sidebar-foot { margin-top: auto; padding-top: 16px; border-top: 1px solid var(--border-dim); }
+  .dossier-box {
+    background: var(--bg-card); border: 1px solid var(--border-dim);
+    padding: 14px; border-radius: 10px; font-size: 11px; color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .dossier-box strong { display: block; color: var(--cursed-blue); font-size: 13px; margin-top: 4px; font-family: 'Cinzel', serif; }
+
+  /* ---------- Main Layout ---------- */
+  .main { flex: 1; min-width: 0; padding: 44px 52px 90px; max-width: 1400px; margin: 0 auto; }
+  .view { display: none; }
+  .view.active { display: block; animation: panelIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+  @keyframes panelIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  .page-head {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    margin-bottom: 36px; border-bottom: 1px solid var(--border-dim); padding-bottom: 22px;
+  }
+  .page-head h1 { font-size: 32px; font-weight: 900; margin: 0 0 6px; letter-spacing: -0.02em; color: #fff; }
+  .page-head p { margin: 0; color: var(--text-muted); font-size: 14px; }
+
+  /* Cards Estilo "Dossiê Confidencial / Domínio" */
+  .dossier-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-dim);
+    border-radius: var(--radius);
+    padding: 26px;
+    position: relative;
+    box-shadow: 0 15px 35px -10px rgba(0,0,0,0.6);
+    transition: all 0.3s ease;
+  }
+  .dossier-card:hover { border-color: rgba(255,255,255,0.12); box-shadow: 0 20px 40px -10px var(--primary-glow); }
+  
+  /* Detalhe de canto cortado estilo arquivo militar/shinobi */
+  .dossier-card::before {
+    content: ""; position: absolute; top: 0; right: 0;
+    width: 20px; height: 20px;
+    background: linear-gradient(135deg, transparent 50%, var(--primary) 50%);
+    opacity: 0.6; border-top-right-radius: var(--radius);
+  }
+
+  .grid { display: grid; gap: 20px; }
+  .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  @media(max-width: 1024px) { .grid-3, .grid-2 { grid-template-columns: 1fr; } }
+
+  .stat-card {
+    background: var(--bg-card); border: 1px solid var(--border-dim);
+    border-radius: var(--radius); padding: 24px; position: relative; overflow: hidden;
+  }
+  .stat-card .label {
+    font-size: 11px; font-weight: 700; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px;
+    display: flex; align-items: center; gap: 8px; font-family: 'JetBrains Mono', monospace;
+  }
+  .stat-card .value { font-size: 30px; font-weight: 900; font-family: 'Cinzel', serif; letter-spacing: -0.02em; }
+  .stat-card .value.primary { color: var(--primary); text-shadow: 0 0 20px var(--primary-glow); }
+  .stat-card .value.blue { color: var(--cursed-blue); text-shadow: 0 0 20px var(--cursed-blue-glow); }
+  .stat-card .sub { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
+
+  /* Barras de Progresso / Chakra */
+  .bar-track {
+    height: 8px; background: rgba(255,255,255,0.03); border-radius: 999px; overflow: hidden; margin-top: 12px;
+    border: 1px solid var(--border-dim);
+  }
+  .bar-fill {
+    height: 100%; border-radius: 999px;
+    background: linear-gradient(90deg, #c2410c, var(--primary));
+    box-shadow: 0 0 12px var(--primary-glow);
+    transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .bar-fill.blue { background: linear-gradient(90deg, #0e7490, var(--cursed-blue)); box-shadow: 0 0 12px var(--cursed-blue-glow); }
+  .bar-fill.green { background: linear-gradient(90deg, #047857, #10b981); }
+
+  section.block { margin-bottom: 36px; }
+  section.block h2 {
+    font-size: 18px; font-weight: 700; margin: 0 0 16px; color: #fff;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  section.block h2 .tag {
+    font-size: 10px; font-weight: 700; font-family: 'JetBrains Mono', monospace;
+    color: #000; background: var(--primary); padding: 3px 10px; border-radius: 4px;
+    letter-spacing: 0.05em; text-transform: uppercase;
+  }
+
+  /* Inputs estilo painel de investigação */
+  .form-row { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; }
+  .form-row > * { flex: 1; min-width: 150px; }
+  label { font-size: 11px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 6px; font-family: 'JetBrains Mono', monospace; text-transform: uppercase; }
+  input, select {
+    width: 100%;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid var(--border-dim);
+    border-radius: 10px;
+    padding: 12px 16px;
+    color: #fff; font-size: 14px; font-family: inherit;
+    transition: all 0.2s ease;
+  }
+  input:focus, select:focus {
+    outline: none; border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-glow), inset 0 0 10px rgba(249,115,22,0.1);
+  }
+  input::placeholder { color: #4b4b60; }
+
+  /* Botões Customizados */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    background: var(--bg-card); border: 1px solid var(--border-dim);
+    color: var(--text-main); padding: 12px 22px; border-radius: 10px;
+    font-size: 13.5px; font-weight: 700; cursor: pointer;
+    transition: all 0.2s ease; text-transform: uppercase; font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.05em;
+  }
+  .btn:hover { background: var(--bg-card-hover); border-color: rgba(255,255,255,0.2); transform: translateY(-1px); }
+  .btn.primary {
+    background: linear-gradient(135deg, var(--primary), #c2410c);
+    border-color: transparent; color: #000; font-weight: 900;
+    box-shadow: 0 4px 20px var(--primary-glow);
+  }
+  .btn.primary:hover { background: linear-gradient(135deg, #fb923c, var(--primary)); box-shadow: 0 6px 25px var(--primary-glow); }
+  .btn.danger { color: #f87171; }
+  .btn.danger:hover { background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3); }
+  .btn.small { padding: 7px 14px; font-size: 11px; }
+
+  /* Lista de Missões / Pistas */
+  .task-list { display: flex; flex-direction: column; gap: 10px; }
+  .task-item {
+    display: flex; align-items: center; gap: 16px;
+    background: var(--bg-card); border: 1px solid var(--border-dim);
+    border-radius: 12px; padding: 16px 20px;
+    transition: all 0.2s ease;
+  }
+  .task-item:hover { border-color: rgba(255,255,255,0.15); background: #141421; }
+  .task-item.done { opacity: 0.45; }
+
+  .task-check {
+    width: 24px; height: 24px; border-radius: 6px;
+    border: 2px solid var(--primary); flex-shrink: 0; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; background: transparent;
+    transition: all 0.2s;
+  }
+  .task-check:hover { background: var(--primary-glow); }
+  .task-check.checked { background: var(--primary); box-shadow: 0 0 12px var(--primary-glow); }
+  .task-check.checked::after { content: "✓"; font-size: 14px; color: #000; font-weight: 900; }
+
+  .task-name { flex: 1; font-size: 14.5px; font-weight: 600; color: #fff; }
+  .task-item.done .task-name { text-decoration: line-through; color: var(--text-muted); }
+
+  .rank-pill {
+    font-size: 10px; font-weight: 800; padding: 4px 10px; border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace; text-transform: uppercase;
+  }
+  .rank-D { background: rgba(113, 113, 122, 0.15); color: #d4d4d8; border: 1px solid rgba(113, 113, 122, 0.3); }
+  .rank-C { background: rgba(6, 182, 212, 0.15); color: #67e8f9; border: 1px solid rgba(6, 182, 212, 0.3); }
+  .rank-B { background: rgba(16, 185, 129, 0.15); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.3); }
+  .rank-A { background: rgba(245, 158, 11, 0.15); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.3); }
+  .rank-S { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.4); }
+
+  .task-points { font-size: 12px; font-family: 'JetBrains Mono', monospace; color: var(--primary); font-weight: 700; min-width: 60px; text-align: right; }
+  
+  .icon-btn {
+    background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 6px;
+    display: flex; align-items: center; border-radius: 6px; transition: all 0.2s;
+  }
+  .icon-btn:hover { color: #f87171; background: rgba(239, 68, 68, 0.1); }
+
+  /* Tabela Financeira */
+  .tx-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .tx-table th {
+    text-align: left; color: var(--text-muted); font-weight: 700; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.1em; padding: 12px 16px; border-bottom: 1px solid var(--border-dim);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .tx-table td { padding: 14px 16px; border-bottom: 1px solid var(--border-dim); }
+  .tx-table tr:last-child td { border-bottom: none; }
+  .amt-in { color: #10b981; font-weight: 800; font-family: 'JetBrains Mono', monospace; }
+  .amt-out { color: #f87171; font-weight: 800; font-family: 'JetBrains Mono', monospace; }
+  .empty-note { color: var(--text-muted); font-size: 13px; padding: 28px; text-align: center; font-style: italic; }
+
+  /* Sub Abas */
+  .tabs-sub { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
+  .tab-sub-btn {
+    background: var(--bg-card); border: 1px solid var(--border-dim); color: var(--text-muted);
+    padding: 9px 18px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer;
+    transition: all 0.2s; font-family: 'JetBrains Mono', monospace; text-transform: uppercase;
+  }
+  .tab-sub-btn:hover { color: #fff; border-color: rgba(255,255,255,0.2); }
+  .tab-sub-btn.active { background: var(--primary); color: #000; border-color: transparent; box-shadow: 0 0 15px var(--primary-glow); }
+  .sub-panel { display: none; }
+  .sub-panel.active { display: block; animation: panelIn 0.25s ease; }
+
+  .day-picker { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .day-picker input { width: auto; flex: none; }
+
+  footer.credit {
+    margin-top: 60px; text-align: center; color: var(--text-muted); font-size: 11px;
+    font-family: 'JetBrains Mono', monospace; border-top: 1px solid var(--border-dim); padding-top: 24px;
+    letter-spacing: 0.1em; text-transform: uppercase;
+  }
+
+  @media(max-width: 900px) {
+    .app-shell { flex-direction: column; }
+    .sidebar { width: 100%; height: auto; position: sticky; top: 0; flex-direction: row; align-items: center; padding: 12px 16px; overflow-x: auto; }
+    .brand { border: none; padding: 0 16px 0 0; margin: 0; }
+    .brand-sub, .sidebar-foot { display: none; }
+    .nav { flex-direction: row; padding: 0; overflow-x: auto; }
+    .nav-item { white-space: nowrap; padding: 8px 12px; }
+    .main { padding: 24px 16px 60px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="domain-bg"></div>
+<div class="app-shell">
+
+  <!-- SIDEBAR COM NOVA LOGO E NOME -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="custom-logo">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/></svg>
+      </div>
+      <div>
+        <div class="brand-title">KENROKU</div>
+        <div class="brand-sub">Escritório Tático</div>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <button class="nav-item active" data-view="dashboard">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Central de Inteligência
+      </button>
+      <button class="nav-item" data-view="missoes">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Missões &amp; Doutrina
+      </button>
+      <button class="nav-item" data-view="cofre">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        Recursos / Cofre
+      </button>
+      <button class="nav-item" data-view="treino">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+        Condicionamento &amp; Dieta
+      </button>
+      <button class="nav-item" data-view="perfil">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Dossiê Biométrico
+      </button>
+    </nav>
+
+    <div class="sidebar-foot">
+      <div class="dossier-box">
+        <span>Grau Hierárquico</span>
+        <strong id="sidebarRank">Academia</strong>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- DASHBOARD -->
+    <div class="view active" id="view-dashboard">
+      <div class="page-head">
+        <div>
+          <h1>Central de Inteligência</h1>
+          <p>Visão analítica de operações, fluxo de energia e resiliência estratégica.</p>
+        </div>
+      </div>
+
+      <div class="grid grid-3" style="margin-bottom:32px;">
+        <div class="stat-card">
+          <div class="label">Chakra / Pontos Totais</div>
+          <div class="value primary" id="statTotalPoints">0</div>
+          <div class="sub" id="statRankLabel">Grau: Novato</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Sequência Operativa</div>
+          <div class="value blue" id="statStreak">0 dias</div>
+          <div class="sub">Dias consecutivos em atividade</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Balanço do Cofre</div>
+          <div class="value" style="color:#10b981;" id="statBalance">R$ 0,00</div>
+          <div class="sub" id="statBalanceSub">Receitas vs Despesas</div>
+        </div>
+      </div>
+
+      <section class="block">
+        <h2>Missões Prioritárias de Hoje <span class="tag" id="dashTaskCount">0/0</span></h2>
+        <div class="dossier-card">
+          <div class="task-list" id="dashTaskList"></div>
+        </div>
+      </section>
+
+      <div class="grid grid-2">
+        <section class="block" style="margin-bottom:0;">
+          <h2>Parâmetros Nutricionais</h2>
+          <div class="dossier-card">
+            <div class="label" style="text-transform:none; font-family:inherit; color:var(--text-muted);">Calorias Consumidas / Meta</div>
+            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:4px;">
+              <span class="value serif" style="font-size:22px; color:#fff;" id="dashCalConsumed">0</span>
+              <span class="sub" id="dashCalGoal">meta: —</span>
+            </div>
+            <div class="bar-track"><div class="bar-fill" id="dashCalBar" style="width:0%"></div></div>
+
+            <div class="label" style="margin-top:18px; text-transform:none; font-family:inherit; color:var(--text-muted);">Proteína Consumida / Meta</div>
+            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:4px;">
+              <span class="value serif" style="font-size:22px; color:#10b981;" id="dashProtConsumed">0g</span>
+              <span class="sub" id="dashProtGoal">meta: —</span>
+            </div>
+            <div class="bar-track"><div class="bar-fill green" id="dashProtBar" style="width:0%"></div></div>
+          </div>
+        </section>
+
+        <section class="block" style="margin-bottom:0;">
+          <h2>Últimas Transações Registradas</h2>
+          <div class="dossier-card" id="dashRecentTx" style="padding:16px;">
+            <div class="empty-note">Nenhum registro tático recente.</div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- MISSOES -->
+    <div class="view" id="view-missoes">
+      <div class="page-head">
+        <div>
+          <h1>Missões &amp; Doutrina</h1>
+          <p>Estabeleça protocolos de hábitos diários e pontue para subir de patente operacional.</p>
+        </div>
+      </div>
+
+      <section class="block">
+        <h2>Adicionar Nova Missão</h2>
+        <div class="dossier-card">
+          <div class="form-row">
+            <div style="flex:2;">
+              <label>Identificação / Título da Missão</label>
+              <input type="text" id="newTaskName" placeholder="Ex: Análise de dados investigativos por 45 min">
+            </div>
+            <div>
+              <label>Grau de Dificuldade</label>
+              <select id="newTaskRank">
+                <option value="D">Rank D — 5 pts</option>
+                <option value="C">Rank C — 10 pts</option>
+                <option value="B" selected>Rank B — 20 pts</option>
+                <option value="A">Rank A — 35 pts</option>
+                <option value="S">Rank S — 50 pts</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn primary" id="addTaskBtn">Registrar Missão</button>
+        </div>
+      </section>
+
+      <section class="block">
+        <h2>Execução de <span id="missoesDateLabel">hoje</span> <span class="tag" id="missoesTaskCount">0/0</span></h2>
+        <div class="day-picker">
+          <input type="date" id="missoesDatePicker">
+          <button class="btn small" id="missoesTodayBtn">Hoje</button>
+        </div>
+        <div class="dossier-card">
+          <div class="task-list" id="missoesTaskList"></div>
+        </div>
+      </section>
+    </div>
+
+    <!-- COFRE -->
+    <div class="view" id="view-cofre">
+      <div class="page-head">
+        <div>
+          <h1>Gestão de Recursos / Cofre</h1>
+          <p>Auditoria contábil de entradas de contratos e suprimentos operacionais.</p>
+        </div>
+      </div>
+
+      <div class="grid grid-3" style="margin-bottom:32px;">
+        <div class="stat-card">
+          <div class="label">Balanço Líquido</div>
+          <div class="value primary" id="cofreBalance">R$ 0,00</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Entradas (Mês)</div>
+          <div class="value" style="color:#10b981;" id="cofreIn">R$ 0,00</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Saídas (Mês)</div>
+          <div class="value" style="color:#f87171;" id="cofreOut">R$ 0,00</div>
+        </div>
+      </div>
+
+      <section class="block">
+        <h2>Novo Lançamento Contábil</h2>
+        <div class="dossier-card">
+          <div class="form-row">
+            <div>
+              <label>Natureza</label>
+              <select id="txType">
+                <option value="in">Entrada (Crédito)</option>
+                <option value="out">Saída (Despesa)</option>
+              </select>
+            </div>
+            <div>
+              <label>Data</label>
+              <input type="date" id="txDate">
+            </div>
+            <div style="flex:2;">
+              <label>Descrição</label>
+              <input type="text" id="txDesc" placeholder="Ex: Contrato de consultoria / Equipamentos">
+            </div>
+            <div>
+              <label>Valor (R$)</label>
+              <input type="number" id="txAmount" placeholder="0.00" step="0.01" min="0">
+            </div>
+          </div>
+          <button class="btn primary" id="addTxBtn">Efetivar Lançamento</button>
+        </div>
+      </section>
+
+      <section class="block">
+        <h2>Registro de Auditoria</h2>
+        <div class="dossier-card" style="padding: 6px 12px;">
+          <table class="tx-table" id="txTable">
+            <thead><tr><th>Data</th><th>Descrição</th><th style="text-align:right;">Valor</th><th style="width: 40px;"></th></tr></thead>
+            <tbody id="txTableBody"></tbody>
+          </table>
+          <div class="empty-note" id="txEmpty" style="display:none;">Nenhum registro encontrado.</div>
+        </div>
+      </section>
+    </div>
+
+    <!-- TREINO & DIETA -->
+    <div class="view" id="view-treino">
+      <div class="page-head">
+        <div>
+          <h1>Condicionamento &amp; Nutrição</h1>
+          <p>Metabolismo basal, ingestão proteica e controle hídrico tático.</p>
+        </div>
+      </div>
+
+      <div class="grid grid-3" style="margin-bottom:32px;">
+        <div class="stat-card">
+          <div class="label">Meta Calórica Diária</div>
+          <div class="value primary" id="tdCalGoal">—</div>
+          <div class="sub" id="tdTdee">Gasto Total (TDEE): —</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Meta Proteica</div>
+          <div class="value" style="color:#10b981;" id="tdProtGoal">—</div>
+          <div class="sub">Baseado na massa corporal</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Hidratação Alvo</div>
+          <div class="value blue" id="tdWaterGoal">—</div>
+          <div class="sub">35ml por quilo</div>
+        </div>
+      </div>
+
+      <div class="tabs-sub">
+        <button class="tab-sub-btn active" data-sub="dieta">Nutrição &amp; Alimentos</button>
+        <button class="tab-sub-btn" data-sub="agua">Hidratação</button>
+        <button class="tab-sub-btn" data-sub="treino">Sessão de Treino</button>
+      </div>
+
+      <div class="day-picker">
+        <input type="date" id="treinoDatePicker">
+        <button class="btn small" id="treinoTodayBtn">Hoje</button>
+      </div>
+
+      <div class="sub-panel active" id="sub-dieta">
+        <section class="block">
+          <h2>Adicionar Ingestão</h2>
+          <div class="dossier-card">
+            <div class="form-row">
+              <div style="flex:2;">
+                <label>Alimento / Refeição</label>
+                <input type="text" id="foodName" placeholder="Ex: Arroz integral e peito de frango 200g">
+              </div>
+              <div>
+                <label>Calorias (kcal)</label>
+                <input type="number" id="foodCal" min="0">
+              </div>
+              <div>
+                <label>Proteína (g)</label>
+                <input type="number" id="foodProt" min="0">
+              </div>
+            </div>
+            <button class="btn primary" id="addFoodBtn">Adicionar Alimento</button>
+          </div>
+        </section>
+        <section class="block">
+          <h2>Balanço do Dia <span class="tag" id="dietDayTotals">0 kcal</span></h2>
+          <div class="dossier-card">
+            <div class="label" style="text-transform:none; font-family:inherit; color:var(--text-muted);">Calorias</div>
+            <div class="bar-track"><div class="bar-fill" id="dietCalBar" style="width:0%"></div></div>
+            <div class="sub" style="margin:6px 0 16px;" id="dietCalSub">0 / 0 kcal</div>
+
+            <div class="label" style="text-transform:none; font-family:inherit; color:var(--text-muted);">Proteína</div>
+            <div class="bar-track"><div class="bar-fill green" id="dietProtBar" style="width:0%"></div></div>
+            <div class="sub" style="margin:6px 0 16px;" id="dietProtSub">0 / 0 g proteína</div>
+
+            <div id="dietList" style="margin-top:12px;"></div>
+          </div>
+        </section>
+      </div>
+
+      <div class="sub-panel" id="sub-agua">
+        <section class="block">
+          <h2>Monitor Hídrico</h2>
+          <div class="dossier-card">
+            <div class="bar-track"><div class="bar-fill blue" id="waterBar" style="width:0%"></div></div>
+            <div class="sub" style="margin:12px 0 20px; font-weight:700; font-size:14px; color:#fff;" id="waterSub">0 / 0 ml</div>
+            <div class="form-row">
+              <button class="btn" data-water="250">+ 250ml</button>
+              <button class="btn" data-water="500">+ 500ml</button>
+              <button class="btn" data-water="750">+ 750ml</button>
+              <button class="btn danger" id="resetWaterBtn">Zerar</button>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div class="sub-panel" id="sub-treino">
+        <section class="block">
+          <h2>Registrar Exercício</h2>
+          <div class="dossier-card">
+            <div class="form-row">
+              <div style="flex:2;">
+                <label>Exercício / Movimento</label>
+                <input type="text" id="exName" placeholder="Ex: Supino Reto / Agachamento Livre">
+              </div>
+              <div>
+                <label>Séries</label>
+                <input type="number" id="exSets" min="0">
+              </div>
+              <div>
+                <label>Repetições</label>
+                <input type="number" id="exReps" min="0">
+              </div>
+              <div>
+                <label>Carga (kg)</label>
+                <input type="number" id="exLoad" min="0">
+              </div>
+            </div>
+            <button class="btn primary" id="addExBtn">Adicionar Exercício</button>
+          </div>
+        </section>
+        <section class="block">
+          <h2>Sessão do Dia</h2>
+          <div id="workoutList"></div>
+        </section>
+      </div>
+    </div>
+
+    <!-- PERFIL -->
+    <div class="view" id="view-perfil">
+      <div class="page-head">
+        <div>
+          <h1>Dossiê Biométrico</h1>
+          <p>Configurações de parâmetros físicos e metabólicos do operador.</p>
+        </div>
+      </div>
+      <section class="block">
+        <div class="dossier-card">
+          <div class="form-row">
+            <div>
+              <label>Nome / Codinome</label>
+              <input type="text" id="pfName" placeholder="Seu nome">
+            </div>
+            <div>
+              <label>Perfil Biológico</label>
+              <select id="pfSex">
+                <option value="m">Masculino</option>
+                <option value="f">Feminino</option>
+              </select>
+            </div>
+            <div>
+              <label>Idade</label>
+              <input type="number" id="pfAge" min="10" max="100">
+            </div>
+          </div>
+          <div class="form-row">
+            <div>
+              <label>Peso (kg)</label>
+              <input type="number" id="pfWeight" min="30" max="300" step="0.1">
+            </div>
+            <div>
+              <label>Altura (cm)</label>
+              <input type="number" id="pfHeight" min="100" max="250">
+            </div>
+            <div>
+              <label>Nível de Atividade</label>
+              <select id="pfActivity">
+                <option value="1.2">Sedentário</option>
+                <option value="1.375">Leve (1-3x/sem)</option>
+                <option value="1.55" selected>Moderado (3-5x/sem)</option>
+                <option value="1.725">Alto (6-7x/sem)</option>
+                <option value="1.9">Atleta / Intenso</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div>
+              <label>Déficit Calórico Alvo (kcal/dia)</label>
+              <input type="number" id="pfDeficit" min="0" max="1500" step="50" value="500">
+            </div>
+            <div>
+              <label>Proteína Alvo (g por kg)</label>
+              <input type="number" id="pfProtein" min="1" max="3" step="0.1" value="1.8">
+            </div>
+          </div>
+          <button class="btn primary" id="saveProfileBtn">Salvar Dossiê e Recalcular Metas</button>
+          <div class="sub" id="profileSavedNote" style="margin-top:12px; color:#10b981; font-weight:600; font-family:'JetBrains Mono',monospace;"></div>
+        </div>
+      </section>
+    </div>
+
+    <footer class="credit">KENROKU &mdash; Sistema de Inteligência Tática e Operacional. Armazenamento local seguro.</footer>
+  </main>
+</div>
+
+<script>
+(function(){
+  var STORAGE_KEY = 'kenroku-data-v1';
+  var todayStr = function(d){
+    d = d || new Date();
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  };
+
+  var defaultState = {
+    profile:{name:'', sex:'m', age:18, weight:70, height:175, activity:1.55, deficit:500, proteinPerKg:1.8},
+    tasks:[
+      {id:'t1', name:'Manter hidratação correta (2.5L+)', rank:'D', points:5},
+      {id:'t2', name:'Executar protocolo de treino físico', rank:'B', points:20},
+      {id:'t3', name:'Sessão de dedução ou leitura estratégica', rank:'C', points:10},
+      {id:'t4', name:'Ciclo de regeneração de sono (7h+)', rank:'C', points:10}
+    ],
+    taskLog:{},
+    finance:[],
+    dietLog:{},
+    waterLog:{},
+    workoutLog:{}
+  };
+
+  var state = JSON.parse(JSON.stringify(defaultState));
+  var saveTimer = null;
+
+  function deepMerge(base, loaded){
+    var out = JSON.parse(JSON.stringify(base));
+    if(loaded && typeof loaded === 'object'){
+      Object.keys(loaded).forEach(function(k){ out[k] = loaded[k]; });
+    }
+    return out;
+  }
+
+  function scheduleSave(){
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function(){
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e){}
+    }, 350);
+  }
+
+  function loadAndRender(){
+    try {
+      var saved = localStorage.getItem(STORAGE_KEY);
+      if(saved) state = deepMerge(defaultState, JSON.parse(saved));
+    } catch(e){}
+    afterLoad();
+  }
+
+  function afterLoad(){
+    populateProfileForm();
+    missoesDate = todayStr();
+    treinoDate = todayStr();
+    document.getElementById('missoesDatePicker').value = missoesDate;
+    document.getElementById('treinoDatePicker').value = treinoDate;
+    document.getElementById('txDate').value = todayStr();
+    renderAll();
+  }
+
+  // Navigation
+  document.querySelectorAll('.nav-item').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.querySelectorAll('.nav-item').forEach(function(b){b.classList.remove('active');});
+      document.querySelectorAll('.view').forEach(function(v){v.classList.remove('active');});
+      btn.classList.add('active');
+      document.getElementById('view-'+btn.dataset.view).classList.add('active');
+    });
+  });
+
+  document.querySelectorAll('.tab-sub-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.querySelectorAll('.tab-sub-btn').forEach(function(b){b.classList.remove('active');});
+      document.querySelectorAll('.sub-panel').forEach(function(p){p.classList.remove('active');});
+      btn.classList.add('active');
+      document.getElementById('sub-'+btn.dataset.sub).classList.add('active');
+    });
+  });
+
+  // Ranks & Points
+  function computeTotalPoints(){
+    var total = 0;
+    Object.keys(state.taskLog).forEach(function(date){
+      (state.taskLog[date]||[]).forEach(function(entry){ total += entry.points || 0; });
+    });
+    return total;
+  }
+  function rankFromPoints(p){
+    if(p >= 1500) return 'Especialista Sênior / Hokage';
+    if(p >= 700) return 'Estrategista de Elite / Jounin';
+    if(p >= 300) return 'Agente Pleno / Chunin';
+    if(p >= 100) return 'Operador Júnior / Genin';
+    return 'Academia / Novato';
+  }
+  function computeStreak(){
+    var streak = 0;
+    var d = new Date();
+    while(true){
+      var ds = todayStr(d);
+      var log = state.taskLog[ds];
+      if(log && log.length > 0){
+        streak++;
+        d.setDate(d.getDate()-1);
+      } else {
+        break;
+      }
+    }
+    return streak;
+  }
+  function fmtMoney(v){
+    return v.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+  }
+
+  // Tasks
+  var missoesDate = todayStr();
+  document.getElementById('addTaskBtn').addEventListener('click', function(){
+    var name = document.getElementById('newTaskName').value.trim();
+    var rank = document.getElementById('newTaskRank').value;
+    if(!name){ alert('Informe o nome da missão.'); return; }
+    var pointsByRank = {D:5, C:10, B:20, A:35, S:50};
+    state.tasks.push({id:'t'+Date.now(), name:name, rank:rank, points:pointsByRank[rank]});
+    document.getElementById('newTaskName').value = '';
+    scheduleSave();
+    renderAll();
+  });
+
+  function toggleTask(taskId, date){
+    var task = state.tasks.find(function(t){return t.id===taskId;});
+    if(!task) return;
+    if(!state.taskLog[date]) state.taskLog[date] = [];
+    var log = state.taskLog[date];
+    var idx = log.findIndex(function(e){return e.taskId===taskId;});
+    if(idx >= 0) log.splice(idx,1);
+    else log.push({taskId:taskId, points:task.points});
+    scheduleSave();
+    renderAll();
+  }
+
+  function deleteTask(taskId){
+    state.tasks = state.tasks.filter(function(t){return t.id!==taskId;});
+    Object.keys(state.taskLog).forEach(function(d){
+      state.taskLog[d] = state.taskLog[d].filter(function(e){return e.taskId!==taskId;});
+    });
+    scheduleSave();
+    renderAll();
+  }
+
+  function renderTaskList(containerId, date){
+    var container = document.getElementById(containerId);
+    container.innerHTML = '';
+    if(state.tasks.length === 0){
+      container.innerHTML = '<div class="empty-note">Nenhuma missão cadastrada.</div>';
+      return;
+    }
+    var log = state.taskLog[date] || [];
+    state.tasks.forEach(function(task){
+      var done = log.some(function(e){return e.taskId===task.id;});
+      var row = document.createElement('div');
+      row.className = 'task-item' + (done?' done':'');
+      row.innerHTML =
+        '<button class="task-check'+(done?' checked':'')+'" data-task="'+task.id+'" aria-label="Concluir"></button>'+
+        '<span class="task-name">'+escapeHtml(task.name)+'</span>'+
+        '<span class="rank-pill rank-'+task.rank+'">'+task.rank+'</span>'+
+        '<span class="task-points">+'+task.points+' pts</span>'+
+        '<button class="icon-btn" data-del="'+task.id+'" aria-label="Deletar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button>';
+      container.appendChild(row);
+    });
+    container.querySelectorAll('[data-task]').forEach(function(btn){
+      btn.addEventListener('click', function(){ toggleTask(btn.dataset.task, date); });
+    });
+    container.querySelectorAll('[data-del]').forEach(function(btn){
+      btn.addEventListener('click', function(){ if(confirm('Remover missão?')) deleteTask(btn.dataset.del); });
+    });
+  }
+
+  function escapeHtml(s){
+    var d = document.createElement('div'); d.textContent = s; return d.innerHTML;
+  }
+
+  document.getElementById('missoesDatePicker').addEventListener('change', function(e){
+    missoesDate = e.target.value; renderAll();
+  });
+  document.getElementById('missoesTodayBtn').addEventListener('click', function(){
+    missoesDate = todayStr();
+    document.getElementById('missoesDatePicker').value = missoesDate;
+    renderAll();
+  });
+
+  // Finance
+  document.getElementById('addTxBtn').addEventListener('click', function(){
+    var type = document.getElementById('txType').value;
+    var date = document.getElementById('txDate').value || todayStr();
+    var desc = document.getElementById('txDesc').value.trim();
+    var amount = parseFloat(document.getElementById('txAmount').value);
+    if(!desc || isNaN(amount) || amount <= 0){ alert('Preencha descrição e valor válidos.'); return; }
+    state.finance.push({id:'f'+Date.now(), date:date, desc:desc, amount:amount, type:type});
+    document.getElementById('txDesc').value = '';
+    document.getElementById('txAmount').value = '';
+    scheduleSave();
+    renderAll();
+  });
+
+  function deleteTx(id){
+    state.finance = state.finance.filter(function(f){return f.id!==id;});
+    scheduleSave();
+    renderAll();
+  }
+
+  function renderFinance(){
+    var balance = 0;
+    state.finance.forEach(function(f){ balance += (f.type==='in'? f.amount : -f.amount); });
+    document.getElementById('statBalance').textContent = fmtMoney(balance);
+    document.getElementById('cofreBalance').textContent = fmtMoney(balance);
+
+    var now = new Date();
+    var monthKey = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+    var monthIn = 0, monthOut = 0;
+    state.finance.forEach(function(f){
+      if(f.date && f.date.slice(0,7)===monthKey){
+        if(f.type==='in') monthIn += f.amount; else monthOut += f.amount;
+      }
+    });
+    document.getElementById('cofreIn').textContent = fmtMoney(monthIn);
+    document.getElementById('cofreOut').textContent = fmtMoney(monthOut);
+
+    var sorted = state.finance.slice().sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
+    var tbody = document.getElementById('txTableBody');
+    tbody.innerHTML = '';
+    document.getElementById('txEmpty').style.display = sorted.length ? 'none':'block';
+    sorted.forEach(function(f){
+      var tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td>'+(f.date||'—')+'</td>'+
+        '<td>'+escapeHtml(f.desc)+'</td>'+
+        '<td style="text-align:right;" class="'+(f.type==='in'?'amt-in':'amt-out')+'">'+(f.type==='in'?'+ ':'- ')+fmtMoney(f.amount)+'</td>'+
+        '<td style="text-align:right;"><button class="icon-btn" data-txdel="'+f.id+'" aria-label="Remover"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button></td>';
+      tbody.appendChild(tr);
+    });
+    tbody.querySelectorAll('[data-txdel]').forEach(function(btn){
+      btn.addEventListener('click', function(){ deleteTx(btn.dataset.txdel); });
+    });
+
+    var recentBox = document.getElementById('dashRecentTx');
+    if(sorted.length === 0){
+      recentBox.innerHTML = '<div class="empty-note">Nenhuma movimentação ainda.</div>';
+    } else {
+      recentBox.innerHTML = sorted.slice(0,4).map(function(f){
+        return '<div class="task-item" style="padding:10px 14px; margin-bottom:6px;"><span>'+escapeHtml(f.desc)+'<div style="font-size:11px; color:var(--text-muted); font-family:var(--mono);">'+f.date+'</div></span>'+
+          '<span class="'+(f.type==='in'?'amt-in':'amt-out')+'" style="margin-left:auto;">'+(f.type==='in'?'+ ':'- ')+fmtMoney(f.amount)+'</span></div>';
+      }).join('');
+    }
+  }
+
+  // Profile & Goals
+  function populateProfileForm(){
+    var p = state.profile;
+    document.getElementById('pfName').value = p.name||'';
+    document.getElementById('pfSex').value = p.sex||'m';
+    document.getElementById('pfAge').value = p.age||18;
+    document.getElementById('pfWeight').value = p.weight||70;
+    document.getElementById('pfHeight').value = p.height||175;
+    document.getElementById('pfActivity').value = p.activity||1.55;
+    document.getElementById('pfDeficit').value = p.deficit||500;
+    document.getElementById('pfProtein').value = p.proteinPerKg||1.8;
+  }
+
+  document.getElementById('saveProfileBtn').addEventListener('click', function(){
+    state.profile = {
+      name: document.getElementById('pfName').value.trim(),
+      sex: document.getElementById('pfSex').value,
+      age: parseFloat(document.getElementById('pfAge').value) || 18,
+      weight: parseFloat(document.getElementById('pfWeight').value) || 70,
+      height: parseFloat(document.getElementById('pfHeight').value) || 175,
+      activity: parseFloat(document.getElementById('pfActivity').value) || 1.55,
+      deficit: parseFloat(document.getElementById('pfDeficit').value) || 500,
+      proteinPerKg: parseFloat(document.getElementById('pfProtein').value) || 1.8
+    };
+    scheduleSave();
+    var note = document.getElementById('profileSavedNote');
+    note.textContent = 'Dossiê atualizado e metas recalculadas com sucesso.';
+    setTimeout(function(){ note.textContent=''; }, 2500);
+    renderAll();
+  });
+
+  function computeGoals(){
+    var p = state.profile;
+    var bmr = (p.sex === 'f') ? (10*p.weight + 6.25*p.height - 5*p.age - 161) : (10*p.weight + 6.25*p.height - 5*p.age + 5);
+    var tdee = bmr * p.activity;
+    var calGoal = Math.max(1200, Math.round(tdee - p.deficit));
+    var protGoal = Math.round(p.weight * p.proteinPerKg);
+    var waterGoal = Math.round(p.weight * 35);
+    return {bmr:Math.round(bmr), tdee:Math.round(tdee), calGoal:calGoal, protGoal:protGoal, waterGoal:waterGoal};
+  }
+
+  // Diet & Workout
+  var treinoDate = todayStr();
+  document.getElementById('treinoDatePicker').addEventListener('change', function(e){
+    treinoDate = e.target.value; renderAll();
+  });
+  document.getElementById('treinoTodayBtn').addEventListener('click', function(){
+    treinoDate = todayStr();
+    document.getElementById('treinoDatePicker').value = treinoDate;
+    renderAll();
+  });
+
+  document.getElementById('addFoodBtn').addEventListener('click', function(){
+    var name = document.getElementById('foodName').value.trim();
+    var cal = parseFloat(document.getElementById('foodCal').value);
+    var prot = parseFloat(document.getElementById('foodProt').value) || 0;
+    if(!name || isNaN(cal) || cal < 0){ alert('Informe alimento e calorias.'); return; }
+    if(!state.dietLog[treinoDate]) state.dietLog[treinoDate] = [];
+    state.dietLog[treinoDate].push({name:name, cal:cal, prot:prot});
+    document.getElementById('foodName').value='';
+    document.getElementById('foodCal').value='';
+    document.getElementById('foodProt').value='';
+    scheduleSave();
+    renderAll();
+  });
+
+  function removeFood(date, idx){
+    state.dietLog[date].splice(idx,1);
+    scheduleSave();
+    renderAll();
+  }
+
+  document.getElementById('addExBtn').addEventListener('click', function(){
+    var name = document.getElementById('exName').value.trim();
+    var sets = parseFloat(document.getElementById('exSets').value) || 0;
+    var reps = parseFloat(document.getElementById('exReps').value) || 0;
+    var load = parseFloat(document.getElementById('exLoad').value) || 0;
+    if(!name){ alert('Informe o exercício.'); return; }
+    if(!state.workoutLog[treinoDate]) state.workoutLog[treinoDate] = [];
+    state.workoutLog[treinoDate].push({name:name, sets:sets, reps:reps, load:load});
+    document.getElementById('exName').value='';
+    document.getElementById('exSets').value='';
+    document.getElementById('exReps').value='';
+    document.getElementById('exLoad').value='';
+    scheduleSave();
+    renderAll();
+  });
+
+  function removeEx(date, idx){
+    state.workoutLog[date].splice(idx,1);
+    scheduleSave();
+    renderAll();
+  }
+
+  document.querySelectorAll('[data-water]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var amt = parseInt(btn.dataset.water, 10);
+      state.waterLog[treinoDate] = (state.waterLog[treinoDate]||0) + amt;
+      scheduleSave();
+      renderAll();
+    });
+  });
+  document.getElementById('resetWaterBtn').addEventListener('click', function(){
+    state.waterLog[treinoDate] = 0;
+    scheduleSave();
+    renderAll();
+  });
+
+  function pct(a,b){ if(!b) return 0; return Math.max(0, Math.min(100, Math.round((a/b)*100))); }
+
+  function renderTreino(){
+    var goals = computeGoals();
+    document.getElementById('tdCalGoal').textContent = goals.calGoal + ' kcal';
+    document.getElementById('tdTdee').textContent = 'TDEE: ' + goals.tdee + ' kcal';
+    document.getElementById('tdProtGoal').textContent = goals.protGoal + ' g';
+    document.getElementById('tdWaterGoal').textContent = (goals.waterGoal/1000).toFixed(1) + ' L';
+
+    var foods = state.dietLog[treinoDate] || [];
+    var calSum = foods.reduce(function(s,f){return s+f.cal;},0);
+    var protSum = foods.reduce(function(s,f){return s+f.prot;},0);
+
+    document.getElementById('dietDayTotals').textContent = calSum + ' kcal';
+    document.getElementById('dietCalBar').style.width = pct(calSum, goals.calGoal)+'%';
+    document.getElementById('dietCalSub').textContent = calSum + ' / ' + goals.calGoal + ' kcal';
+    document.getElementById('dietProtBar').style.width = pct(protSum, goals.protGoal)+'%';
+    document.getElementById('dietProtSub').textContent = protSum + ' / ' + goals.protGoal + ' g proteína';
+
+    var dietListEl = document.getElementById('dietList');
+    if(foods.length===0){
+      dietListEl.innerHTML = '<div class="empty-note">Nenhum registro nutricional.</div>';
+    } else {
+      dietListEl.innerHTML = foods.map(function(f, i){
+        return '<div class="task-item" style="padding:10px 14px; margin-bottom:6px;"><span>'+escapeHtml(f.name)+'<div style="font-size:11px; color:var(--text-muted); font-family:var(--mono);">'+f.cal+' kcal · '+f.prot+'g proteína</div></span>'+
+          '<button class="icon-btn" data-food-del="'+i+'" style="margin-left:auto;" aria-label="Remover"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button></div>';
+      }).join('');
+      dietListEl.querySelectorAll('[data-food-del]').forEach(function(btn){
+        btn.addEventListener('click', function(){ removeFood(treinoDate, parseInt(btn.dataset.foodDel,10)); });
+      });
+    }
+
+    var water = state.waterLog[treinoDate] || 0;
+    document.getElementById('waterBar').style.width = pct(water, goals.waterGoal)+'%';
+    document.getElementById('waterSub').textContent = water + ' / ' + goals.waterGoal + ' ml (' + pct(water, goals.waterGoal) + '%)';
+
+    var exs = state.workoutLog[treinoDate] || [];
+    var exListEl = document.getElementById('workoutList');
+    if(exs.length===0){
+      exListEl.innerHTML = '<div class="empty-note">Nenhum exercício registrado.</div>';
+    } else {
+      exListEl.innerHTML = exs.map(function(e, i){
+        return '<div class="task-item" style="padding:10px 14px; margin-bottom:6px;"><span>'+escapeHtml(e.name)+'<div style="font-size:11px; color:var(--text-muted); font-family:var(--mono);">'+e.sets+' séries × '+e.reps+' reps · Carga: '+e.load+'kg</div></span>'+
+          '<button class="icon-btn" data-ex-del="'+i+'" style="margin-left:auto;" aria-label="Remover"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button></div>';
+      }).join('');
+      exListEl.querySelectorAll('[data-ex-del]').forEach(function(btn){
+        btn.addEventListener('click', function(){ removeEx(treinoDate, parseInt(btn.dataset.exDel,10)); });
+      });
+    }
+
+    document.getElementById('missoesDateLabel').textContent = (treinoDate === todayStr()) ? 'hoje' : treinoDate;
+
+    var dashGoals = goals;
+    var todayFoods = state.dietLog[todayStr()] || [];
+    var dCal = todayFoods.reduce(function(s,f){return s+f.cal;},0);
+    var dProt = todayFoods.reduce(function(s,f){return s+f.prot;},0);
+    document.getElementById('dashCalConsumed').textContent = dCal;
+    document.getElementById('dashCalGoal').textContent = 'meta: '+dashGoals.calGoal+' kcal';
+    document.getElementById('dashCalBar').style.width = pct(dCal, dashGoals.calGoal)+'%';
+    document.getElementById('dashProtConsumed').textContent = dProt+'g';
+    document.getElementById('dashProtGoal').textContent = 'meta: '+dashGoals.protGoal+'g';
+    document.getElementById('dashProtBar').style.width = pct(dProt, dashGoals.protGoal)+'%';
+  }
+
+  function renderAll(){
+    renderTaskList('dashTaskList', todayStr());
+    renderTaskList('missoesTaskList', missoesDate);
+
+    var todayLog = state.taskLog[todayStr()] || [];
+    document.getElementById('dashTaskCount').textContent = todayLog.length + '/' + state.tasks.length;
+    var mLog = state.taskLog[missoesDate] || [];
+    document.getElementById('missoesTaskCount').textContent = mLog.length + '/' + state.tasks.length;
+
+    var total = computeTotalPoints();
+    var rank = rankFromPoints(total);
+    document.getElementById('statTotalPoints').textContent = total;
+    document.getElementById('statRankLabel').textContent = 'Grau: ' + rank;
+    document.getElementById('sidebarRank').textContent = rank;
+    document.getElementById('statStreak').textContent = computeStreak() + ' dias';
+
+    renderFinance();
+    renderTreino();
+  }
+
+  loadAndRender();
+})();
+</script>
+</body>
+</html>
